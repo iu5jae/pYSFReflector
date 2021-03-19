@@ -288,6 +288,11 @@ def ReadConfig(f,p):
   log_path = config['Log']['FilePath']
   log_name = config['Log']['FileRoot']
   try:
+    file_rotate = config['Log']['FileRotate']
+  except:
+    file_rotate = "1" # to keep file-rotation by default with timestamp
+  
+  try:
     port = int(config['Network']['Port'])
   except:
     port = 42000
@@ -311,6 +316,7 @@ def ReadConfig(f,p):
   p.append(port)               # 5
   p.append(file_blacklist)     # 6
   p.append(t_reload_blacklist) # 7
+  p.append(file_rotate)        # 8
   
 
 def RunServer(config):
@@ -500,7 +506,11 @@ def RunServer(config):
 def printlog(mess):
   global filelog
   global log_basename
-  log_file = log_basename + '-' + str(datetime.utcnow().strftime('%Y-%m-%d')) + '.log'
+  global file_rotate
+  if file_rotate == "1":
+    log_file = log_basename + '-' + str(datetime.utcnow().strftime('%Y-%m-%d')) + '.log'
+  else:
+    log_file = log_basename + '.log'
   try:
     if not os.path.isfile(log_file):
       filelog.flush()
@@ -538,8 +548,12 @@ except:
   sys.exit()
   
 log_basename = config[3] + '/' + config[4]
-### log 
-log_file = log_basename + '-' + str(datetime.utcnow().strftime('%Y-%m-%d')) + '.log'
+file_rotate = config[8]
+### log
+if file_rotate == "1":
+  log_file = log_basename + '-' + str(datetime.utcnow().strftime('%Y-%m-%d')) + '.log'
+else:
+  log_file = log_basename + '.log'
 try:
   if os.path.isfile(log_file):
     filelog = open(log_file,'a')
