@@ -1,0 +1,11 @@
+##########################
+## Example of blocklist ##
+##########################
+## Block callsign
+# CS:IU5JAE  
+# IU5JAE
+## Block gateway
+# GW:TESTBDG
+## Block IP
+# IP:80.181.214.194
+
