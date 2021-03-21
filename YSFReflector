@@ -318,7 +318,23 @@ def ReadConfig(f,p):
   p.append(t_reload_blacklist) # 7
   p.append(file_rotate)        # 8
   
+    
+def sanitize_msg(data):
+  bya_msg = bytearray(data)
 
+  if (data[0:4] == b"YSFP"):
+    for i in range(10):
+      if (bya_msg[i+4] == 0):
+        bya_msg[i+4] = 32      
+
+  if (data[0:4] == b"YSFD"):
+    for i in range(30):
+      if (bya_msg[i+4] == 0):
+        bya_msg[i+4] = 32
+
+  return(bytes(bya_msg))
+  
+    
 def RunServer(config):
     global filelog
     global version
@@ -370,7 +386,8 @@ def RunServer(config):
     
     
     while True:
-            data,addr = recvPackets.get()    # bloccante se coda vuota
+            data_ns, addr = recvPackets.get()    # bloccante se coda vuota
+            data = sanitize_msg(data_ns)
             cmd = data[0:4]
             if (cmd == b'YSFP'):
               pres = False
