@@ -102,7 +102,7 @@ def CalcID(ref):
 
 
 def getidgw(cl, adr):
-  i=0
+  i=[0, '']
   for c in cl:       
     if ((c[0] == adr[0]) and (c[1] == adr[1])): 
       i = [c[4], c[2]]
