@@ -168,20 +168,25 @@ def TimeoutTX(t, t_lock, r_lock, lista_lh):
     time.sleep(0.1)  
 
 
-def canTrasmit(cs):
+def canTrasmit(cs, re_en):
   global BLACK_LIST
+  global WHITE_LIST
   call_sp = re.split(r'[-/]', cs)
   call = call_sp[0]
+  if inlist(WHITE_LIST, call):
+    return True
   if inlist(BLACK_LIST, call):
     return False
   if (len(call_sp) > 1):
     if (call_sp[1] == 'RPT'):
       return False
-  if (re.match(r'^\d?[A-Z]{1,2}\d{1,4}[A-Z]{1,3}$',call,re.IGNORECASE) and (len(call) <= 8)):
-    return True
+  if re_en:
+    if (re.match(r'^\d?[A-Z]{1,2}\d{1,4}[A-Z]{1,3}$',call,re.IGNORECASE) and (len(call) <= 8)):
+      return True
+    else:
+      return False  
   else:
-    pass
-    return False  
+    return True
 
     
 def lista_gw(cl):
@@ -210,6 +215,7 @@ def update_clients(cl):
 
 def blacklist(f_bl, t_reload, cli):
   global BLACK_LIST
+  global WHITE_LIST
   global GW_BL
   global IP_BL
   f_time_old = 0
@@ -226,6 +232,7 @@ def blacklist(f_bl, t_reload, cli):
         BL_TMP = []
         GW_TMP = []
         IP_TMP = []
+        WL_TMP = []
         printlog('Reload the Blacklist from File')
         for row in file:
           content = row.strip()
@@ -242,6 +249,11 @@ def blacklist(f_bl, t_reload, cli):
               if ((len(cont) <= 8) and (len(cont) >= 3)):
                 if (not inlist(BL_TMP, cont)):
                   bisect.insort(BL_TMP,cont)
+            
+            # WL      
+            if (len(c_split) == 2 and c_split[0] == 'AL'):      
+              if (not inlist(WL_TMP, c_split[1])):
+                bisect.insort(WL_TMP,c_split[1])
                   
             # GW      
             if (len(c_split) == 2 and c_split[0] == 'GW'):      
@@ -264,6 +276,7 @@ def blacklist(f_bl, t_reload, cli):
       except Exception as ex:
         printlog('Failed to load Blacklist from File ')
       BLACK_LIST = BL_TMP.copy()
+      WHITE_LIST = WL_TMP.copy()
       GW_BL = GW_TMP.copy()
       IP_BL = IP_TMP.copy()
       f_time_old = f_time
@@ -300,6 +313,11 @@ def ReadConfig(f,p):
     file_blacklist = config['Block List']['File']
   except:
     file_blacklist = ''
+
+  try:  
+    CheckRE = int(config['Block List']['CheckRE'])
+  except:
+    CheckRE = 1
   
   try:
     t_reload_blacklist = float(config['Block List']['Time'])
@@ -317,17 +335,18 @@ def ReadConfig(f,p):
   p.append(file_blacklist)     # 6
   p.append(t_reload_blacklist) # 7
   p.append(file_rotate)        # 8
+  p.append(CheckRE)            # 9
   
     
 def sanitize_msg(data):
   bya_msg = bytearray(data)
 
-  if (data[0:4] == b"YSFP"):
+  if ((data[0:4] == b"YSFP") and (len(data) == 14)):
     for i in range(10):
       if (bya_msg[i+4] == 0):
         bya_msg[i+4] = 32      
 
-  if (data[0:4] == b"YSFD"):
+  if ((data[0:4] == b"YSFD") and (len(data) == 155)):
     for i in range(30):
       if (bya_msg[i+4] == 0):
         bya_msg[i+4] = 32
@@ -370,6 +389,8 @@ def RunServer(config):
     
     f_blacklist = config[6]
     tr_blacklist = config[7] * 60.0
+    
+    CheckRE = config[9]
     
     recvPackets = queue.Queue()
 
@@ -426,7 +447,7 @@ def RunServer(config):
                     tx_ok = False
                     block_r = 'IP'      
                   else:
-                    tx_ok = canTrasmit(data[14:24].decode().strip())
+                    tx_ok = canTrasmit(data[14:24].decode().strip(), CheckRE)
                     block_r = 'CS'
               if tx_ok:
                 if ((tx[0] == 0) and (id_corr != 0)): 
@@ -545,7 +566,7 @@ def printlog(mess):
 
 ######## main ########
 
-version = '20210317'
+version = '20210322'
 
 if (len(sys.argv) != 2):
   print('Invalid Number of Arguments')
@@ -580,7 +601,8 @@ except:
   print('Unable to Open Log File')
   sys.exit()
   
-BLACK_LIST = []  
+BLACK_LIST = [] 
+WHITE_LIST = [] 
 GW_BL = []
 IP_BL = []  
   
