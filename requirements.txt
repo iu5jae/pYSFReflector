@@ -1,16 +1,5 @@
 #
 ####### requirements.txt for pYSFReflector #######
 #
-socket
-threading
-queue
-sys
-os
-time
-re
 configparser
 datetime
-signal
-datetime
-bisect
-struct
