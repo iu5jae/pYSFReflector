@@ -33,19 +33,18 @@ There is also a functionality implemented that prohibits parallel transmissions 
 ## Easy Installation And Upgrade
 Depending on your used operating system and python3-installation you just have to take care that following libraries are installed:
 
-* socket
-* threading
-* queue
-* sys
-* os
-* time
-* re
+* bisect
 * configparser
 * datetime
+* os
+* queue
+* re
 * signal
-* datetime
-* bisect
+* socket
 * struct
+* sys
+* threading
+* time
 
 In most installations this packages are already installed, otherwise you easily can install them with your system-package-manager (for example Debian: apt) or you use pip3 install <package>-command.
 
