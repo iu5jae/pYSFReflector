@@ -68,7 +68,7 @@ Gateway:Callsign:Target:Timestamp:Position in List
 
 ### QRED - Query Rejected Callsigns/Gateways/IP-Addresses (with distinct data)
 #### Reply
-`ARED;`
+`ARED;DG9VH/CS:DG9VH1A:ALL:-1:29-03-2021 15-18-54:-1;`
 
 #### Description
 
