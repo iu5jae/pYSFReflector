@@ -54,22 +54,25 @@ Callsign:Gateway:Target:Position in List:Timestamp
 
 ### QREJ - 
 #### Reply
+`AREJ;`
 
 #### Description
 
 ### QLHD - 
 #### Reply
+`ALHD;`
 
 #### Description
 
 ### QRED - 
 #### Reply
+`ARED;`
 
 #### Description
 
 ### QACL - Query Access Control List-Statistics
 #### Reply
-`AACL;CS/0|AL/0|GW/0|IP/0;`
+`AACL;CS/2|AL/1|GW/1|IP/0;CS:DN3VH;CS:DG9VH;AL:N0CALL;GW:DN3VH;`
 
 #### Description
-CS/Number of muted Callsigns|AL/Number of whitelisted Callsigns|GW/Number of muted Gateways|IP/Number of muted IP-Adresses
+CS/Number of muted Callsigns|AL/Number of whitelisted Callsigns|GW/Number of muted Gateways|IP/Number of muted IP-Adresses;List of Entries from deny.db
