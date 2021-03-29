@@ -27,7 +27,6 @@ import os
 import time
 import re
 import configparser
-import datetime
 import signal
 from datetime import datetime
 import bisect 
@@ -46,7 +45,7 @@ def long2ip(lng):
     return ip
 
 
-## gestione liste LH ecc ##
+## LH list management ##
 def inserisci_lista(lista, elemento, n_max):
     if (len(lista) < n_max):
         lista.append(elemento)
@@ -54,6 +53,21 @@ def inserisci_lista(lista, elemento, n_max):
         for i in range(n_max - 1):
             lista[i] = lista[i+1]
         lista[n_max-1] = elemento    
+
+def inserisci_listaD(lista, elemento, n_max):    
+    for i in lista:
+      if (i[1] == elemento[1]):
+        lista.remove(i)
+        break
+    
+    if (len(lista) < n_max):
+        lista.append(elemento)
+    else:
+        for i in range(n_max - 1):
+            lista[i] = lista[i+1]
+        lista[n_max-1] = elemento    
+
+
 
 def stampa_lista(lista):
   for i in range(len(lista)):
@@ -80,7 +94,7 @@ def check_string(l):
 
 def RecvData(sock,recvPackets):
     while True:
-        data,addr = sock.recvfrom(1024)    # bloccante se non ricevo niente
+        data,addr = sock.recvfrom(1024)    # block if I don't receive anything 
         recvPackets.put((data,addr))
         
 
@@ -140,7 +154,7 @@ def TimeoutNodi(cl):
         cl.remove(c)
 
 
-def TimeoutTX(t, t_lock, r_lock, lista_lh):
+def TimeoutTX(t, t_lock, r_lock, lista_lh, lista_lhd):
   while True:
     if (t[1] < 5):
       t[1] += 0.1
@@ -148,7 +162,8 @@ def TimeoutTX(t, t_lock, r_lock, lista_lh):
       t[0] = 0  
       printlog('Network watchdog has expired')
       inserisci_lista(lista_lh, [check_string(t[2]), check_string(t[3]), check_string(t[4]), t[5], datetime.fromtimestamp(t[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - t[6]) ], 20)
-      t[0] = 0
+      inserisci_listaD(lista_lhd, [check_string(t[2]), check_string(t[3]), check_string(t[4]), t[5], datetime.fromtimestamp(t[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - t[6]) ], 20)
+      t[1] = 0
       t[2] = ''
       t[3] = ''
       t[4] = ''
@@ -173,21 +188,39 @@ def canTrasmit(cs, re_en):
   global WHITE_LIST
   call_sp = re.split(r'[-/]', cs)
   call = call_sp[0]
-  if inlist(WHITE_LIST, call):
-    return True
-  if inlist(BLACK_LIST, call):
-    return False
+  
+## always block a stream from repeater ###
   if (len(call_sp) > 1):
     if (call_sp[1] == 'RPT'):
+      return False      
+      
+## case CheckRE == 1 ###
+  if (re_en == 1):  
+    if inlist(WHITE_LIST, call):
+      return True
+    if inlist(BLACK_LIST, call):
       return False
-  if re_en:
     if (re.match(r'^\d?[A-Z]{1,2}\d{1,4}[A-Z]{1,3}$',call,re.IGNORECASE) and (len(call) <= 8)):
       return True
     else:
       return False  
-  else:
+
+## case CheckRE == 0 ###
+  if (re_en == 0):  
+    if inlist(WHITE_LIST, call):
+      return True
+    if inlist(BLACK_LIST, call):
+      return False
     return True
 
+## case CheckRE == -1 ###
+  if (re_en == -1):  
+    if inlist(BLACK_LIST, call):
+      return False
+    if inlist(WHITE_LIST, call):
+      return True
+    return False
+    
     
 def lista_gw(cl):
   info = ''
@@ -223,7 +256,7 @@ def blacklist(f_bl, t_reload, cli):
     f_time = os.stat(f_bl).st_mtime
   except:
     pass
-  
+    
   while True:
     f_time = os.stat(f_bl).st_mtime
     if (f_time != f_time_old):
@@ -236,10 +269,13 @@ def blacklist(f_bl, t_reload, cli):
         printlog('Reload the Blacklist from File')
         for row in file:
           content = row.strip()
-          # riga valida
+          
+          # valid line (not a comment)
           if ((len(content) > 3) and (content[0] != '#')):
             c_split = content.split(':')
-            
+            for i in range(len(c_split)):
+              c_split[i] = c_split[i].strip()
+              
             # CALL
             if (len(c_split) == 1 or c_split[0] == 'CS'):
               if (len(c_split) == 1):
@@ -274,11 +310,12 @@ def blacklist(f_bl, t_reload, cli):
                           
         file.close() 
       except Exception as ex:
-        printlog('Failed to load Blacklist from File ')
+        printlog('Failed to load Blacklist from File ' + str(ex) )
       BLACK_LIST = BL_TMP.copy()
       WHITE_LIST = WL_TMP.copy()
       GW_BL = GW_TMP.copy()
       IP_BL = IP_TMP.copy()
+      printlog('Loaded ' + str(len(BLACK_LIST)) + '/CS ' + str(len(WHITE_LIST)) + '/AL ' + str(len(GW_BL)) + '/GW ' + str(len(IP_BL)) + '/IP')
       f_time_old = f_time
       update_clients(cli)
     else:
@@ -286,7 +323,7 @@ def blacklist(f_bl, t_reload, cli):
     time.sleep(t_reload)
 
 
-## lettura file configurazione ##
+## reading configuration file ##
 def ReadConfig(f,p):
   config = configparser.ConfigParser()
   
@@ -304,6 +341,13 @@ def ReadConfig(f,p):
     file_rotate = config['Log']['FileRotate']
   except:
     file_rotate = "1" # to keep file-rotation by default with timestamp
+
+  try:
+    en_ext_cmd = int(config['Log']['EnableExtendedCommands'])
+  except:
+    en_ext_cmd = 0 # extended commands disabled by default
+
+
   
   try:
     port = int(config['Network']['Port'])
@@ -316,6 +360,10 @@ def ReadConfig(f,p):
 
   try:  
     CheckRE = int(config['Block List']['CheckRE'])
+    if (CheckRE > 1):
+      CheckRE = 1
+    if (CheckRE < -1):
+      CheckRE = -1
   except:
     CheckRE = 1
   
@@ -336,7 +384,9 @@ def ReadConfig(f,p):
   p.append(t_reload_blacklist) # 7
   p.append(file_rotate)        # 8
   p.append(CheckRE)            # 9
-  
+  p.append(en_ext_cmd)         #10
+
+
     
 def sanitize_msg(data):
   bya_msg = bytearray(data)
@@ -370,14 +420,17 @@ def RunServer(config):
     rx_lock = []
     rx_lock_tout = {}
     
-    # lista LH
+    # LH list
     LH = []
-    # lista bloccati
+    LHD = []
+    
+    # muted list
     BL = []
+    BLD = []
         
-    id = 1  # id nodo
+    id = 1  # id gw
     id_str = 1 # id stream
-    tx = [0, 0, '', '', '', 0, 0]  # id_nodo, tout, gateway, src, dest, id_stream, start_time
+    tx = [0, 0, '', '', '', 0, 0]  # id_gw, tout, gateway, src, dest, id_stream, start_time
     
     refl_name = config[1]
     refl_desc = config[2]
@@ -392,14 +445,20 @@ def RunServer(config):
     
     CheckRE = config[9]
     
+    en_ext_cmd = config[10]
+    
     recvPackets = queue.Queue()
 
     print('Starting YSFReflector-' + version)
     printlog('Starting YSFReflector-' + version)
+    if (en_ext_cmd == 1):
+      printlog('Extended Commands Enabled')
+    else:
+      printlog('Extended Commands Disabled')  
     threading.Thread(target=RecvData,args=(s,recvPackets)).start()
     threading.Thread(target=ElencoNodi,args=(clients,)).start()
     threading.Thread(target=TimeoutNodi,args=(clients,)).start()
-    threading.Thread(target=TimeoutTX,args=(tx,rx_lock_tout,rx_lock,LH)).start()
+    threading.Thread(target=TimeoutTX,args=(tx,rx_lock_tout,rx_lock,LH,LHD)).start()
     if (len(f_blacklist) > 0):
       threading.Thread(target=blacklist,args=(f_blacklist,tr_blacklist,clients)).start()
     
@@ -407,7 +466,7 @@ def RunServer(config):
     
     
     while True:
-            data_ns, addr = recvPackets.get()    # bloccante se coda vuota
+            data_ns, addr = recvPackets.get()    # blocked if queue is empty
             data = sanitize_msg(data_ns)
             cmd = data[0:4]
             if (cmd == b'YSFP'):
@@ -468,9 +527,9 @@ def RunServer(config):
               else:
                 if (id_corr not in rx_lock):
                   rx_lock.append(id_corr)  
-                  inserisci_lista(BL, [check_string(data[4:14].decode().strip()), check_string(data[14:24].decode().strip()), check_string(data[24:34].decode().strip()), -1, datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y %H-%M-%S"), -1 ], 20)
+                  inserisci_lista(BL, [check_string(data[4:14].decode().strip()) + '/' + block_r, check_string(data[14:24].decode().strip()), check_string(data[24:34].decode().strip()), -1, datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y %H-%M-%S"), -1 ], 20)
+                  inserisci_listaD(BLD, [check_string(data[4:14].decode().strip()) + '/' + block_r, check_string(data[14:24].decode().strip()), check_string(data[24:34].decode().strip()), -1, datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y %H-%M-%S"), -1 ], 20)
                   printlog('Data from ' + data[14:24].decode().strip().ljust(10) + ' at ' + data[4:14].decode().strip().ljust(10) + ' blocked/' + block_r)
-                  # printlog('Bloccato: ' + data[14:24].decode().strip() + ' via ' +   data[4:14].decode().strip())
                 rx_lock_tout[id_corr] = 0  
               
               if ((id_corr == tx[0]) and (id_corr != 0)):    
@@ -484,6 +543,7 @@ def RunServer(config):
                 if (tx[0] != 0):
                   printlog('Received end of transmission')
                   inserisci_lista(LH, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.fromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
+                  inserisci_listaD(LHD, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.fromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
                 tx[0] = 0
                 tx[2] = ''
                 tx[3] = ''
@@ -492,50 +552,104 @@ def RunServer(config):
                 tx[6] = 0
                   
             if (cmd == b'YSFS'):
-              # printlog('YSF server status enquiry from ' + addr[0] + ':' + str(addr[1]))
+              printlog('YSF server status enquiry from ' + addr[0] + ':' + str(addr[1]))
               if (len(clients) > 999):
                 num_cli = 999
               else:
                 num_cli = len(clients)  
               info = 'YSFS' + str(refl_id).zfill(5) + refl_name.ljust(16) + refl_desc.ljust(14) + str(num_cli).zfill(3)
               s.sendto(str.encode(info),addr)  
-            
-            
-            ## messaggi per report attivo ##
-            if (cmd == b'QSRU'):
-               printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
-               info = 'ASRU;' + str(round(time.time()-time_start)) + ';'
-               s.sendto(str.encode(info),addr) 
-            
-            
-            if (cmd == b'QSRI'):
-               printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
-               info = 'ASRI;' + str(refl_id) + ':' + refl_name + ':' + refl_desc + ';'
-               s.sendto(str.encode(info),addr) 
-            
-            
-            if (cmd == b'QGWL'):
-               printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
-               info = 'AGWL;' + lista_gw(clients) 
-               s.sendto(str.encode(info),addr) 
-               
-            if (cmd == b'QLHL'):
-               printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
-               info = 'ALHL;' + lista_invio(LH) 
-               s.sendto(str.encode(info),addr)    
 
-            if (cmd == b'QREJ'):
-               printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
-               info = 'AREJ;' + lista_invio(BL) 
-               s.sendto(str.encode(info),addr)        
+                  
+            if (cmd == b'YSFV'):
+              printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
+              info = 'YSFV' + 'pYSFReflector' + ' ' + version
+              s.sendto(str.encode(info),addr)  
+ 
+            if (cmd == b'YSFI'):
+              printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
+             # info = 'YSFV' + 'pYSFReflector' + ' ' + version
+             # s.sendto(str.encode(info),addr)  
+                         
+                        
+            
+            ## Extended Commands ##
+            if (en_ext_cmd == 1):
+              if (cmd == b'QSRU'):
+                printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
+                info = 'ASRU;' + str(round(time.time()-time_start)) + ';'
+                s.sendto(str.encode(info),addr) 
+                    
+              if (cmd == b'QSRI'):
+                printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
+                info = 'ASRI;' + str(refl_id) + ':' + refl_name + ':' + refl_desc + ':' + 'pYSFReflector' + ':' + version + ':' + str(CheckRE) + ';'
+                s.sendto(str.encode(info),addr) 
+            
+              if (cmd == b'QGWL'):
+                printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
+                info = 'AGWL;' + lista_gw(clients) 
+                s.sendto(str.encode(info),addr) 
                
-            if (cmd == b'QBLK'):
-               printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
-               s_info = ''
-               for c in BLACK_LIST:
-                s_info += c + ';'
-               info = 'ABLK;' + s_info 
-               s.sendto(str.encode(info),addr)                     
+              if (cmd == b'QLHL'):
+                printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
+                info = 'ALHL;' + lista_invio(LH) 
+                s.sendto(str.encode(info),addr)    
+
+              if (cmd == b'QREJ'):
+                printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
+                info = 'AREJ;' + lista_invio(BL) 
+                s.sendto(str.encode(info),addr)        
+               
+              if (cmd == b'QLHD'):
+                printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
+                info = 'ALHD;' + lista_invio(LHD) 
+                s.sendto(str.encode(info),addr)    
+
+              if (cmd == b'QRED'):
+                printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
+                info = 'ARED;' + lista_invio(BLD) 
+                s.sendto(str.encode(info),addr)        
+
+              if (cmd == b'QACL'):
+                printlog('Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
+                s_info = ''
+                info = 'AACL;CS/' + str(len(BLACK_LIST)) + '|' + 'AL/' + str(len(WHITE_LIST)) + '|' +  'GW/' + str(len(GW_BL)) + '|' +  'IP/' + str(len(IP_BL)) + ';'
+                i = 0
+                for c in BLACK_LIST:
+                  s_info += 'CS:' + c + ';'
+                  i += 1
+                  if (i >= 20):
+                    break
+                info += s_info 
+               
+                s_info = ''
+                i = 0
+                for c in WHITE_LIST:
+                  s_info += 'AL:' + c + ';'
+                  i += 1
+                  if (i >= 20):
+                    break
+                info += s_info 
+               
+                s_info = ''
+                i = 0
+                for c in GW_BL:
+                  s_info += 'GW:' + c + ';'
+                  i += 1
+                  if (i >= 20):
+                    break
+                info += s_info  
+               
+                s_info = ''
+                i = 0
+                for c in IP_BL:
+                  s_info += 'IP:' + long2ip(c) + ';'
+                  i += 1
+                  if (i >= 20):
+                    break
+                info += s_info   
+               
+                s.sendto(str.encode(info),addr)                     
             
                                 
     s.close()
@@ -566,7 +680,7 @@ def printlog(mess):
 
 ######## main ########
 
-version = '20210322'
+version = '20210329'
 
 if (len(sys.argv) != 2):
   print('Invalid Number of Arguments')
@@ -577,7 +691,7 @@ if (sys.argv[1].strip() == '-v'):
   print('YSFReflector version ' + version)
   sys.exit()
 
-## lettura configurazione ##
+## reading configuration ##
 config=[]
 try:
   ReadConfig(sys.argv[1].strip(), config)
