@@ -57,7 +57,7 @@ Gateway:Callsign:Target:Timestamp:Position in List
 `AREJ;DG9VH/CS:DG9VH400:ALL:-1:29-03-2021 12-17-08:-1;`
 
 #### Description
-XXX TODO
+Gateway/Rule that matched:Callsign:Target:Placeholder (Ignore):Timestamp:Placeholder (Ignore);
 
 ### QLHD - Query Last Heard List (with distinct callsigns)
 #### Reply
@@ -71,7 +71,7 @@ Gateway:Callsign:Target:Timestamp:Position in List
 `ARED;DG9VH/CS:DG9VH1A:ALL:-1:29-03-2021 15-18-54:-1;`
 
 #### Description
-XXX TODO
+Gateway/Rule that matched:Callsign:Target:Placeholder (Ignore):Timestamp:Placeholder (Ignore);
 
 ### QACL - Query Access Control List-Statistics
 #### Reply
