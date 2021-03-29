@@ -449,8 +449,8 @@ def RunServer(config):
     
     recvPackets = queue.Queue()
 
-    print('Starting YSFReflector-' + version)
-    printlog('Starting YSFReflector-' + version)
+    print('Starting pYSFReflector-' + version)
+    printlog('Starting pYSFReflector-' + version)
     if (en_ext_cmd == 1):
       printlog('Extended Commands Enabled')
     else:
