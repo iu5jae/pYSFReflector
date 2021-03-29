@@ -688,7 +688,7 @@ if (len(sys.argv) != 2):
   sys.exit()
   
 if (sys.argv[1].strip() == '-v'):
-  print('YSFReflector version ' + version)
+  print('pYSFReflector version ' + version)
   sys.exit()
 
 ## reading configuration ##
