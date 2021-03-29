@@ -50,7 +50,7 @@ Callsign:IP-Address:Port
 `ALHL;DG9VH:DG9VH:ALL:724:29-03-2021 07-32-13:0;2622-DL:DN3VH:ALL:723:29-03-2021 07-31-52:0;`
 
 #### Description
-Gateway:Callsign:Target:Timestamp:Position in List
+Gateway:Callsign:Target:id_stream:StartTime:Duration
 
 ### QREJ - Query Rejected Callsigns/Gateways/IP-Addresses
 #### Reply
@@ -64,7 +64,7 @@ Gateway/Rule that matched:Callsign:Target:Placeholder (Ignore):Timestamp:Placeho
 `ALHD;2622-DL:DO7VN:ALL:2:29-03-2021 12-13-27:6;2622-DL:DH1VY:ALL:1:29-03-2021 11-45-30:0;`
 
 #### Description
-Gateway:Callsign:Target:Timestamp:Position in List
+Gateway:Callsign:Target:id_stream:StartTime:Duration
 
 ### QRED - Query Rejected Callsigns/Gateways/IP-Addresses (with distinct data)
 #### Reply
