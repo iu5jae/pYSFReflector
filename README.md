@@ -49,3 +49,14 @@ Depending on your used operating system and python3-installation you just have t
 In most installations this packages are already installed, otherwise you easily can install them with your system-package-manager (for example Debian: apt) or you use pip3 install <package>-command.
 
 The configuration file (YSFReflector.ini) is based on the origin YSFReflector.ini of G4KLX's YSFReflector but with added new configuration-items. So If you know the old reflector-software - configuring this one would be straight forward.
+
+## Best Practise Installation
+For getting the best user experience it is recommended to configure your pYSFReflector with the following parameter in the YSFReflector.ini:
+
+`FileRotate=0`
+
+This results in having only one logfile for each program and having it rotated by your linux-system with logrotate if configured.
+
+If you are using the php-based Dashbord by DG9VH (https://github.com/dg9vh/YSFReflector-Dashboard) please leave it at `FileRotate=1`, if you are using the websockets based version (recommended at https://github.com/dg9vh/WSYSFDash) you can use `FileRotate=0`. Take care to configure the dashboard's logtailer.ini in sync to this.
+
+To configure log rotation in Linux take a look at https://www.tecmint.com/install-logrotate-to-manage-log-rotation-in-linux/.
