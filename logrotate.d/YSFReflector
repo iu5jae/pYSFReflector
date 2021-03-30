@@ -1,0 +1,9 @@
+/var/log/YSFReflector.log {
+    weekly
+    rotate 3
+    compress
+    delaycompress
+    copytruncate
+    missingok
+    notifempty
+}
