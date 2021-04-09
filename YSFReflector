@@ -133,7 +133,7 @@ def ElencoNodi(cl):
     else:
       printlog('Currently linked repeaters/gateways:')
       for c in cl:
-        printlog('     ' + c[2].ljust(10) + ': ' + str(c[0]) + ':' + str(c[1]) + ' ' + str(c[3]) + '/60')
+        printlog('     ' + c[2].ljust(10) + ': ' + str(c[0]) + ':' + str(c[1]) + ' ' + str(c[3]) + '/60 : ' + datetime.utcfromtimestamp(c[6]).strftime("%Y-%m-%d %H:%M:%S"))
         if (c[5] == 1):
           cl_lo.append(c)
       if (len(cl_lo) == 0):
@@ -161,8 +161,8 @@ def TimeoutTX(t, t_lock, r_lock, lista_lh, lista_lhd):
     if ((t[1] > 1.0) and (t[0] != 0)):
       t[0] = 0  
       printlog('Network watchdog has expired')
-      inserisci_lista(lista_lh, [check_string(t[2]), check_string(t[3]), check_string(t[4]), t[5], datetime.fromtimestamp(t[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - t[6]) ], 20)
-      inserisci_listaD(lista_lhd, [check_string(t[2]), check_string(t[3]), check_string(t[4]), t[5], datetime.fromtimestamp(t[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - t[6]) ], 20)
+      inserisci_lista(lista_lh, [check_string(t[2]), check_string(t[3]), check_string(t[4]), t[5], datetime.utcfromtimestamp(t[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - t[6]) ], 20)
+      inserisci_listaD(lista_lhd, [check_string(t[2]), check_string(t[3]), check_string(t[4]), t[5], datetime.utcfromtimestamp(t[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - t[6]) ], 20)
       t[1] = 0
       t[2] = ''
       t[3] = ''
@@ -225,7 +225,7 @@ def canTrasmit(cs, re_en):
 def lista_gw(cl):
   info = ''
   for c in cl:
-    info += c[2] + ':' + c[0] + ':' + str(c[1]) + ';'  
+    info += c[2] + ':' + c[0] + ':' + str(c[1]) + ':' + datetime.utcfromtimestamp(c[6]).strftime("%d-%m-%Y %H-%M-%S") + ';'  
   return info
 
 
@@ -415,7 +415,7 @@ def RunServer(config):
     s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
     s.setblocking(1)
     s.bind((host,port))
-    clients = []   # addr, port, gw, t_corr, ID, lonly
+    clients = []   # addr, port, gw, t_corr, ID, lonly, t_conn
     c = []
     rx_lock = []
     rx_lock_tout = {}
@@ -482,7 +482,7 @@ def RunServer(config):
                   lonly = 1
                 if inlist(IP_BL, ip2long(addr[0])):
                   lonly = 1 
-                c=[addr[0], addr[1], (data[4:14]).decode().strip(), 0, id, lonly]
+                c=[addr[0], addr[1], (data[4:14]).decode().strip(), 0, id, lonly, time.time()]
                 id += 1
                 clients.append(c)
                 printlog('Adding ' + c[2].ljust(10) + ' (' + c[0] + ':' + str(c[1]) + ')')
@@ -527,8 +527,8 @@ def RunServer(config):
               else:
                 if (id_corr not in rx_lock):
                   rx_lock.append(id_corr)  
-                  inserisci_lista(BL, [check_string(data[4:14].decode().strip()) + '/' + block_r, check_string(data[14:24].decode().strip()), check_string(data[24:34].decode().strip()), -1, datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y %H-%M-%S"), -1 ], 20)
-                  inserisci_listaD(BLD, [check_string(data[4:14].decode().strip()) + '/' + block_r, check_string(data[14:24].decode().strip()), check_string(data[24:34].decode().strip()), -1, datetime.fromtimestamp(time.time()).strftime("%d-%m-%Y %H-%M-%S"), -1 ], 20)
+                  inserisci_lista(BL, [check_string(data[4:14].decode().strip()) + '/' + block_r, check_string(data[14:24].decode().strip()), check_string(data[24:34].decode().strip()), -1, datetime.utcfromtimestamp(time.time()).strftime("%d-%m-%Y %H-%M-%S"), -1 ], 20)
+                  inserisci_listaD(BLD, [check_string(data[4:14].decode().strip()) + '/' + block_r, check_string(data[14:24].decode().strip()), check_string(data[24:34].decode().strip()), -1, datetime.utcfromtimestamp(time.time()).strftime("%d-%m-%Y %H-%M-%S"), -1 ], 20)
                   printlog('Data from ' + data[14:24].decode().strip().ljust(10) + ' at ' + data[4:14].decode().strip().ljust(10) + ' blocked/' + block_r)
                 rx_lock_tout[id_corr] = 0  
               
@@ -542,8 +542,8 @@ def RunServer(config):
               if ((data[34] & 0x01) == 0x01):
                 if (tx[0] != 0):
                   printlog('Received end of transmission')
-                  inserisci_lista(LH, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.fromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
-                  inserisci_listaD(LHD, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.fromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
+                  inserisci_lista(LH, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.utcfromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
+                  inserisci_listaD(LHD, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.utcfromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
                 tx[0] = 0
                 tx[2] = ''
                 tx[3] = ''
@@ -680,7 +680,7 @@ def printlog(mess):
 
 ######## main ########
 
-version = '20210329'
+version = '20210408'
 
 if (len(sys.argv) != 2):
   print('Invalid Number of Arguments')
