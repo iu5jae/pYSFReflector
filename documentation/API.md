@@ -40,10 +40,10 @@ ID:Name:Description:Software-Name:Version:Status of Regular Expression Check (ca
 
 ### QGWL - Query Gateway List
 #### Reply
-`AGWL;DL-LNK:161.97.73.43:57313;2622-DL:178.238.234.72:42000;DG9VH:84.58.124.6:42140;`
+`AGWL;DL-LNK:161.97.73.43:57313:10-04-2021 10-16-08;2622-DL:178.238.234.72:42000;DG9VH:84.58.124.6:42140:10-04-2021 10-16-08;`
 
 #### Description
-Callsign:IP-Address:Port
+Callsign:IP-Address:Port:Connected-Since-Timestamp
 
 ### QLHL - Query Last Heard List
 #### Reply
