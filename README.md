@@ -60,3 +60,13 @@ This results in having only one logfile for each program and having it rotated b
 If you are using the php-based Dashbord by DG9VH (https://github.com/dg9vh/YSFReflector-Dashboard) please leave it at `FileRotate=1`, if you are using the websockets based version (recommended at https://github.com/dg9vh/WSYSFDash) you can use `FileRotate=0`. Take care to configure the dashboard's logtailer.ini in sync to this.
 
 To configure log rotation in Linux take a look at https://www.tecmint.com/install-logrotate-to-manage-log-rotation-in-linux/.
+
+### Setting FileLevel in Logging
+actually the FileLevel-Logging is done in 3 variant loglevels: 0 to 2. Here is a short description what is logged in the different levels:
+
+* Level 2: Only messages on startup and error-messages are logged
+* Level 1: All from level 2 plus normal messages created when running the reflector. This level is recommended if you are running a dashboard with the reflector.
+* Level 0: All from level 1 and 2 plus some additional information about remote-commands not needed in regular situations. This level shows the full log.
+
+
+
