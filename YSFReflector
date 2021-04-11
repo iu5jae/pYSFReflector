@@ -579,11 +579,9 @@ def RunServer(config):
               s.sendto(str.encode(info),addr)  
  
             if (cmd == b'YSFI'):
+              # Maybe we can do something usefull with this infos later?
               printlog(0, 'Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
-             # info = 'YSFV' + 'pYSFReflector' + ' ' + version
-             # s.sendto(str.encode(info),addr)  
-                         
-                        
+              printlog(0, 'Received information from: ' + addr[0] + ': Callsign: ' + str(data[4:14].decode().strip()) + ' RX-QRG: ' + str(data[14:23].decode().strip()) + ' TX-QRG: ' + str(data[23:32].decode().strip()) + ' Loc: ' + str(data[32:38].decode().strip()) + ' QTH: ' + str(data[38:58].decode().strip()) + ' Type: ' + str(data[58:70].decode().strip()) + ' GW-ID: ' + str(data[70:87].decode().strip()))
             
             ## Extended Commands ##
             if (en_ext_cmd == 1):
@@ -694,7 +692,7 @@ def printlog(log_level, mess):
 
 ######## main ########
 
-version = '20210408'
+version = '20210411'
 
 if (len(sys.argv) != 2):
   print('Invalid Number of Arguments')
