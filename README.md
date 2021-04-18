@@ -9,6 +9,8 @@ With the enhanced blocking list you are able to mute calls based on
 * callsign of gateway used
 * ip-address of gateway
 
+This rules only mute traffic from the gateway to the reflector. For gateways and ip-adresses of gateways are additional rules for bi-directional blocking implemented which could be used to stop delivering traffic to a specific gateway (for example on multinet-setups to have a network insulated for a specific time because of special conditions or stoping traffic to guys sniffing traffic and transporting it into systems that are unwanted - 'wild bridges' for example).
+
 ### Blocking On Regular Expression Callsign Check
 It is also possible to use (by default enabled in the YSFReflector.ini) a callsign check based on a regular expression to check the callsign plausibility in callsign-format and length.
 
