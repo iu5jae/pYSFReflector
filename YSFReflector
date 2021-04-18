@@ -239,11 +239,17 @@ def lista_invio(lista):
 def update_clients(cl):
   global GW_BL
   global IP_BL  
+  global GW_LK
+  global IP_LK  
   for c in cl:
-    if (inlist(GW_BL, c[2]) or inlist(IP_BL, ip2long(c[0]))):
+    if (inlist(GW_BL, c[2]) or inlist(IP_BL, ip2long(c[0])) or inlist(GW_LK, c[2]) or inlist(IP_LK, ip2long(c[0]))):
       c[5] = 1
     else:  
       c[5] = 0
+    if (inlist(GW_LK, c[2]) or inlist(IP_LK, ip2long(c[0]))):
+      c[7] = 1
+    else:  
+      c[7] = 0
 
 
 def blacklist(f_bl, t_reload, cli):
@@ -251,6 +257,9 @@ def blacklist(f_bl, t_reload, cli):
   global WHITE_LIST
   global GW_BL
   global IP_BL
+  global GW_LK
+  global IP_LK  
+
   f_time_old = 0
   try:
     f_time = os.stat(f_bl).st_mtime
@@ -266,6 +275,8 @@ def blacklist(f_bl, t_reload, cli):
         GW_TMP = []
         IP_TMP = []
         WL_TMP = []
+        GW_LK_TMP = []
+        IP_LK_TMP = []
         printlog(1, 'Reload the Blacklist from File')
         for row in file:
           content = row.strip()
@@ -296,6 +307,11 @@ def blacklist(f_bl, t_reload, cli):
               if (not inlist(GW_TMP, c_split[1])):
                 bisect.insort(GW_TMP,c_split[1])
                 
+            # GWB      
+            if (len(c_split) == 2 and c_split[0] == 'GWB'):      
+              if (not inlist(GW_LK_TMP, c_split[1])):
+                bisect.insort(GW_LK_TMP,c_split[1])                
+                
             # IP      
             if (len(c_split) == 2 and c_split[0] == 'IP'):      
               try:
@@ -307,6 +323,18 @@ def blacklist(f_bl, t_reload, cli):
               if (ipl > 0):  
                 if (not inlist(IP_TMP, ipl)):
                   bisect.insort(IP_TMP, ipl)
+            
+             # IPB      
+            if (len(c_split) == 2 and c_split[0] == 'IPB'):      
+              try:
+                ipa = socket.gethostbyname(c_split[1])
+                ipl = ip2long(ipa)
+              except:
+                ipl = 0
+                printlog(2, 'Invalid hostname ' + c_split[1])
+              if (ipl > 0):  
+                if (not inlist(IP_LK_TMP, ipl)):
+                  bisect.insort(IP_LK_TMP, ipl)
                           
         file.close() 
       except Exception as ex:
@@ -315,7 +343,9 @@ def blacklist(f_bl, t_reload, cli):
       WHITE_LIST = WL_TMP.copy()
       GW_BL = GW_TMP.copy()
       IP_BL = IP_TMP.copy()
-      printlog(1, 'Loaded ' + str(len(BLACK_LIST)) + '/CS ' + str(len(WHITE_LIST)) + '/AL ' + str(len(GW_BL)) + '/GW ' + str(len(IP_BL)) + '/IP')
+      GW_LK = GW_LK_TMP.copy()
+      IP_LK = IP_LK_TMP.copy()
+      printlog(1, 'Loaded ' + str(len(BLACK_LIST)) + '/CS ' + str(len(WHITE_LIST)) + '/AL ' + str(len(GW_BL)) + '/GW ' + str(len(IP_BL)) + '/IP ' + str(len(GW_LK)) + '/GWB ' + str(len(IP_LK)) + '/IPB')
       f_time_old = f_time
       update_clients(cli)
     else:
@@ -422,12 +452,14 @@ def RunServer(config):
     global BLACK_LIST
     global GW_BL
     global IP_BL
+    global GW_LK
+    global IP_LK
     host = '0.0.0.0'   
     port = config[5]
     s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
     s.setblocking(1)
     s.bind((host,port))
-    clients = []   # addr, port, gw, t_corr, ID, lonly, t_conn
+    clients = []   # addr, port, gw, t_corr, ID, lonly, t_conn, locked
     c = []
     rx_lock = []
     rx_lock_tout = {}
@@ -490,11 +522,19 @@ def RunServer(config):
                   break
               if not pres:  
                 lonly = 0
+                locked = 0
                 if inlist(GW_BL, (data[4:14]).decode().strip()):
                   lonly = 1
                 if inlist(IP_BL, ip2long(addr[0])):
                   lonly = 1 
-                c=[addr[0], addr[1], (data[4:14]).decode().strip(), 0, id, lonly, time.time()]
+                if inlist(GW_LK, (data[4:14]).decode().strip()):
+                  locked = 1
+                  lonly = 1
+                if inlist(IP_LK, ip2long(addr[0])):
+                  locked = 1 
+                  lonly = 1
+                  
+                c=[addr[0], addr[1], (data[4:14]).decode().strip(), 0, id, lonly, time.time(), locked]
                 id += 1
                 clients.append(c)
                 printlog(1, 'Adding ' + c[2].ljust(10) + ' (' + c[0] + ':' + str(c[1]) + ')')
@@ -510,11 +550,11 @@ def RunServer(config):
             if ((cmd == b'YSFD') and (len(data) == 155)):
               [id_corr, gw_corr] = getidgw(clients, addr)
               if (tx[0] == 0):
-                if inlist(GW_BL, gw_corr):
+                if (inlist(GW_BL, gw_corr) or inlist(GW_LK, gw_corr)):
                   tx_ok = False
                   block_r = 'GW'
                 else:
-                  if inlist(IP_BL, ip2long(addr[0])):
+                  if (inlist(IP_BL, ip2long(addr[0])) or inlist(IP_LK, ip2long(addr[0]))):
                     tx_ok = False
                     block_r = 'IP'      
                   else:
@@ -548,14 +588,13 @@ def RunServer(config):
                 tx[1] = 0
         
               for c in clients:
-                if (((c[0] != addr[0]) or (c[1] != addr[1])) and (id_corr == tx[0]) and (id_corr != 0) and (id_corr not in rx_lock)):
+                if (((c[0] != addr[0]) or (c[1] != addr[1])) and (id_corr == tx[0]) and (id_corr != 0) and (id_corr not in rx_lock) and (c[7] == 0)):
                   s.sendto(data,(c[0], c[1]))
             
-              if ((data[34] & 0x01) == 0x01):
-                if (tx[0] != 0):
-                  printlog(1, 'Received end of transmission')
-                  inserisci_lista(LH, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.utcfromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
-                  inserisci_listaD(LHD, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.utcfromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
+              if (((data[34] & 0x01) == 0x01) and (tx[0] == id_corr) and (tx[0] !=0)):
+                printlog(1, 'Received end of transmission')
+                inserisci_lista(LH, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.utcfromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
+                inserisci_listaD(LHD, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.utcfromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
                 tx[0] = 0
                 tx[2] = ''
                 tx[3] = ''
@@ -692,7 +731,7 @@ def printlog(log_level, mess):
 
 ######## main ########
 
-version = '20210411'
+version = '20210417'
 
 if (len(sys.argv) != 2):
   print('Invalid Number of Arguments')
@@ -733,6 +772,8 @@ BLACK_LIST = []
 WHITE_LIST = [] 
 GW_BL = []
 IP_BL = []  
+GW_LK = []
+IP_LK = []  
   
 RunServer(config)
 

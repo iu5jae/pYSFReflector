@@ -5,9 +5,15 @@
 # CS:IU5JAE  
 # IU5JAE
 ## Block gateway
+## listen only
 # GW:TESTBDG
+## Two way mute
+# GWB:TESTBDG
 ## Block IP
+## listen only
 # IP:80.181.214.194
+## Two way mute 
+# IPB:80.181.214.194
 ## Allowed callsign
 AL:N0CALL
 
