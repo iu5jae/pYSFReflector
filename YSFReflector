@@ -413,7 +413,16 @@ def ReadConfig(f,p):
     t_reload_blacklist = 5.0
   if (t_reload_blacklist < 0.1):
     t_reload_blacklist = 0.1
-    
+  
+  try:
+    debug = int(config['Network']['Debug'])
+    if (debug >= 1):
+      debug = 1
+    if (debug < 1):
+      debug = 0
+  except:
+    debug = 0
+  
   p.append(id)                 # 0
   p.append(name)               # 1
   p.append(description)        # 2
@@ -427,6 +436,7 @@ def ReadConfig(f,p):
   p.append(en_ext_cmd)         #10
   p.append(display_level)      #11
   p.append(file_level)         #12
+  p.append(debug)              #13
 
 
     
@@ -454,6 +464,7 @@ def RunServer(config):
     global IP_BL
     global GW_LK
     global IP_LK
+    global debug
     host = '0.0.0.0'   
     port = config[5]
     s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
@@ -513,6 +524,10 @@ def RunServer(config):
             data_ns, addr = recvPackets.get()    # blocked if queue is empty
             data = sanitize_msg(data_ns)
             cmd = data[0:4]
+            
+            if debug == 1:
+              hex_dump(data)
+
             if (cmd == b'YSFP'):
               pres = False
               for c in clients:
@@ -703,12 +718,14 @@ def RunServer(config):
                                 
     s.close()
 
-      
+
 def printlog(log_level, mess):
   global filelog
   global log_basename
   global file_rotate
   global file_level
+  global debug
+  
   if file_rotate == "1":
     log_file = log_basename + '-' + str(datetime.utcnow().strftime('%Y-%m-%d')) + '.log'
   else:
@@ -719,14 +736,38 @@ def printlog(log_level, mess):
       filelog.close()
       filelog = open(log_file,'x')
   except:
-    pass     
-  if file_level <= log_level:
-    str_log = check_string('M: ' + str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f'))[:-3] + ' ' + mess) 
+    pass
+    
+  if isinstance(log_level, int):
+    if file_level <= log_level:
+      str_log = check_string('M: ' + str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f'))[:-3] + ' ' + mess)
+  else:
+    if log_level == "d" and debug == 1:
+      str_log = check_string('D: ' + str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f'))[:-3] + ' ' + mess)
   try:
     filelog.write(str_log + '\n') 
     filelog.flush()
   except:
     pass  
+
+
+def hex_dump(data):
+  try:
+    n = 0
+    b = data[0:16]
+    while b:
+      s1 = " ".join([f"{i:02x}" for i in b]) # hex string
+      s1 = s1[0:23] + " " + s1[23:]          # insert extra space between groups of 8 hex values
+
+      s2 = "".join([chr(i) if 32 <= i <= 127 else "." for i in b]) # ascii string; chained comparison
+
+      message = f"{n * 16:08x}  {s1:<48}  |{s2}|"
+      printlog("d", message)
+      n += 1
+      b = data[n*16:(n+1)*16]
+
+  except Exception as e:
+    print(__file__, ": ", type(e).__name__, " - ", e, sep="", file=sys.stderr)
 
 
 ######## main ########
@@ -754,6 +795,8 @@ log_basename = config[3] + '/' + config[4]
 file_rotate = config[8]
 display_level = config[11]
 file_level = config[12]
+debug = config[13]
+
 ### log
 if file_rotate == "1":
   log_file = log_basename + '-' + str(datetime.utcnow().strftime('%Y-%m-%d')) + '.log'
@@ -774,7 +817,8 @@ GW_BL = []
 IP_BL = []  
 GW_LK = []
 IP_LK = []  
-  
+
+
 RunServer(config)
 
   
