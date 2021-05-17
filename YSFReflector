@@ -154,7 +154,9 @@ def TimeoutNodi(cl):
         cl.remove(c)
 
 
-def TimeoutTX(t, t_lock, r_lock, lista_lh, lista_lhd):
+def TimeoutTX(t, t_lock, r_lock, lista_lh, lista_lhd, t_out, t_react):
+  global BLK_TMP
+  global SCHED
   while True:
     if (t[1] < 5):
       t[1] += 0.1
@@ -180,12 +182,56 @@ def TimeoutTX(t, t_lock, r_lock, lista_lh, lista_lhd):
     for x in pop_list:
         t_lock.pop(x)   
         printlog(1, 'Removed from blockeds queue ' + str(x))
+        
+    if (((time.time() - t[6]) > t_out) and (t[0] != 0)):       # Tx timeout
+      if (not inlist(BLK_TMP, t[3])):
+        bisect.insort(BLK_TMP,t[3])  
+        printlog(1, 'Timeout ' + t[3])
+        t[0] = 0                          # drop transmission/force reauthorisation
+        t_sched =  time.time() + t_react
+        SCHED.append([t[3], 'RC', t_sched])       # append scheduled remove from blocked list
+        printlog(1, 'Appended scheduled job: ' + t[3] + '/RC at time '  + time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(t_sched))) 
     time.sleep(0.1)  
 
+def scheduler():
+  global BLK_TMP
+  global SCHED
+  while True:
+    time.sleep(1)
+    t = time.time()
+    for sc in SCHED:
+      if (t > sc[2]):
+        if (sc[1] == 'RC'):
+          BLK_TMP.remove(sc[0])
+          SCHED.remove(sc)
+          printlog(1, 'Removed from temporary blockeds queue ' + sc[0]) 
+  
 
+
+def ckeck_wild_ptt(cs, tw, cnt, trea):
+  global W_PTT
+  global BLK_TMP
+  n = 0
+  tc = time.time()
+  W_PTT.append([cs, tc])
+  for r in W_PTT:
+    if (r[1] < (tc - tw)):
+      W_PTT.remove(r)
+    else:
+      if (r[0] == cs):
+        n += 1  
+  if (n >= cnt):
+    printlog(1, 'Wild-PTT ' + r[0])
+    if (not inlist(BLK_TMP, r[0])):
+        bisect.insort(BLK_TMP,r[0])  
+        SCHED.append([r[0], 'RC', tc + trea])
+        printlog(1, 'Appended scheduled job: ' + r[0] + '/RC at time '  + time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(tc + trea)))
+
+  
 def canTrasmit(cs, re_en):
   global BLACK_LIST
   global WHITE_LIST
+  global BLK_TMP
   call_sp = re.split(r'[-/]', cs)
   call = call_sp[0]
   
@@ -193,6 +239,9 @@ def canTrasmit(cs, re_en):
   if (len(call_sp) > 1):
     if (call_sp[1] == 'RPT'):
       return False      
+  
+  if inlist(BLK_TMP, call):
+    return False
       
 ## case CheckRE == 1 ###
   if (re_en == 1):  
@@ -422,7 +471,29 @@ def ReadConfig(f,p):
       debug = 0
   except:
     debug = 0
+    
+  try:
+    timeout = float(config['Protections']['Timeout'])
+  except:
+    timeout = 240.0
+
+  try:
+    treactivate = float(config['Protections']['Treactivate'])
+  except:
+    treactivate = 1800.0  
   
+  
+  try:
+    wildptttime = float(config['Protections']['WildPTTTime'])
+  except:
+    wildptttime = 5.0  
+      
+  
+  try:
+    wildpttcount = int(config['Protections']['WildPTTCount'])
+  except:
+    wildpttcount = 3  
+
   p.append(id)                 # 0
   p.append(name)               # 1
   p.append(description)        # 2
@@ -437,6 +508,10 @@ def ReadConfig(f,p):
   p.append(display_level)      #11
   p.append(file_level)         #12
   p.append(debug)              #13
+  p.append(timeout)            #14
+  p.append(treactivate)        #15
+  p.append(wildptttime)        #16
+  p.append(wildpttcount)       #17
 
 
     
@@ -464,6 +539,7 @@ def RunServer(config):
     global IP_BL
     global GW_LK
     global IP_LK
+    global BLK_TMP
     global debug
     host = '0.0.0.0'   
     port = config[5]
@@ -502,6 +578,12 @@ def RunServer(config):
     
     en_ext_cmd = config[10]
     
+    timeout = config[14]
+    treactivate = config[15]
+    
+    wptttime = config[16]
+    wpttcount = config[17]
+    
     recvPackets = queue.Queue()
 
     print('Starting pYSFReflector-' + version)
@@ -513,7 +595,8 @@ def RunServer(config):
     threading.Thread(target=RecvData,args=(s,recvPackets)).start()
     threading.Thread(target=ElencoNodi,args=(clients,)).start()
     threading.Thread(target=TimeoutNodi,args=(clients,)).start()
-    threading.Thread(target=TimeoutTX,args=(tx,rx_lock_tout,rx_lock,LH,LHD)).start()
+    threading.Thread(target=TimeoutTX,args=(tx,rx_lock_tout,rx_lock,LH,LHD,timeout,treactivate)).start()
+    threading.Thread(target=scheduler,args=[]).start()
     if (len(f_blacklist) > 0):
       threading.Thread(target=blacklist,args=(f_blacklist,tr_blacklist,clients)).start()
     
@@ -576,7 +659,7 @@ def RunServer(config):
                     tx_ok = canTrasmit(data[14:24].decode().strip(), CheckRE)
                     block_r = 'CS'
               if tx_ok:
-                if ((tx[0] == 0) and (id_corr != 0)): 
+                if ((tx[0] == 0) and (id_corr != 0)): # new stream 
                   tx[0] = id_corr
                   # gateway
                   tx[2] = data[4:14].decode().strip()
@@ -590,7 +673,7 @@ def RunServer(config):
                   tx[6] = time.time()
                   id_str += 1   
                   printlog(1, 'Received data from ' + tx[3].ljust(10) +   ' to ' +  tx[4].ljust(10) + ' at ' +  tx[2].ljust(10))
-                  
+                  ckeck_wild_ptt(tx[3], wptttime, wpttcount, treactivate)
               else:
                 if (id_corr not in rx_lock):
                   rx_lock.append(id_corr)  
@@ -646,7 +729,7 @@ def RunServer(config):
                     
               if (cmd == b'QSRI'):
                 printlog(0, 'Received command ' + cmd.decode() + ' from: ' + addr[0] + ':' + str(addr[1]))
-                info = 'ASRI;' + str(refl_id) + ':' + refl_name + ':' + refl_desc + ':' + 'pYSFReflector' + ':' + version + ':' + str(CheckRE) + ';'
+                info = 'ASRI;' + str(refl_id) + ':' + refl_name + ':' + refl_desc + ':' + 'pYSFReflector' + ':' + version + ':' + str(CheckRE) + ':' + str(timeout) + ':' + str(treactivate) + ':' + str(wptttime) + ':' + str(wpttcount) + ';'
                 s.sendto(str.encode(info),addr) 
             
               if (cmd == b'QGWL'):
@@ -772,7 +855,7 @@ def hex_dump(data):
 
 ######## main ########
 
-version = '20210419'
+version = '20210512'
 
 if (len(sys.argv) != 2):
   print('Invalid Number of Arguments')
@@ -817,7 +900,9 @@ GW_BL = []
 IP_BL = []  
 GW_LK = []
 IP_LK = []  
-
+BLK_TMP = []
+SCHED = []
+W_PTT = []
 
 RunServer(config)
 
