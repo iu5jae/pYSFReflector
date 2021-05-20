@@ -33,10 +33,10 @@ Uptime of reflector in seconds
 
 ### QSRI - Query Reflector Info
 #### Reply
-`ASRI;62829:DE Germany:YSF262 BM263:pYSFReflector:20210326:1;`
+`ASRI;90123:IT GRF-TEST:TEST PyRefl:pYSFReflector:20210512:1:240.0:1800.0:5.0:3;`
 
 #### Description
-ID:Name:Description:Software-Name:Version:Status of Regular Expression Check (can be -1/0/1)
+ID:Name:Description:Software-Name:Version:Status of Regular Expression Check (can be -1/0/1):Timeout:Treactivate:WildPTTTime:WildPTTCount
 
 ### QGWL - Query Gateway List
 #### Reply
