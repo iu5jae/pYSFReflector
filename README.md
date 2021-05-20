@@ -34,15 +34,15 @@ There is also a functionality implemented that prohibits parallel transmissions 
 
 ### Timeout function and Wild-PTT funcion (as BM), see .ini
 
-[Protections]
-timeout Tx [sec]
-Timeout = 240
-Wild PTT time window [sec]
-WildPTTTime = 5
-Wild PTT stream count   
-WildPTTCount = 3
-time to callsign reactivation after timeout or WildPTT [sec]
-Treactivate = 1800
+`[Protections]`  
+`#timeout Tx [sec]`  
+`Timeout = 240`  
+`#Wild PTT time window [sec]`  
+`WildPTTTime = 5`  
+`#Wild PTT stream count`     
+`WildPTTCount = 3`  
+`#time to callsign reactivation after timeout or WildPTT [sec]`  
+`Treactivate = 1800`  
 
 in practice: if you exceed the timeout time (Timeout value)
 (for example you have the PTT pressed in your pocket)
