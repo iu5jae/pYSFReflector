@@ -157,10 +157,14 @@ def TimeoutNodi(cl):
 def TimeoutTX(t, t_lock, r_lock, lista_lh, lista_lhd, t_out, t_react):
   global BLK_TMP
   global SCHED
+  global lock_tx
   while True:
     if (t[1] < 5):
+      lock_tx.acquire()
       t[1] += 0.1
-    if ((t[1] > 1.0) and (t[0] != 0)):
+      lock_tx.release()
+    if ((t[1] > 1.5) and (t[0] != 0)):
+      lock_tx.acquire()
       t[0] = 0  
       printlog(1, 'Network watchdog has expired')
       inserisci_lista(lista_lh, [check_string(t[2]), check_string(t[3]), check_string(t[4]), t[5], datetime.utcfromtimestamp(t[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - t[6]) ], 20)
@@ -171,11 +175,12 @@ def TimeoutTX(t, t_lock, r_lock, lista_lh, lista_lhd, t_out, t_react):
       t[4] = ''
       t[5] = 0
       t[6] = 0
+      lock_tx.release()
     pop_list = []  
     for d in t_lock:
       if (t_lock[d] < 5):
         t_lock[d] += 0.1
-      if ((t_lock[d] > 1.5) and (t_lock[d] != 0)):    
+      if ((t_lock[d] > 2.0) and (t_lock[d] != 0)):    
         pop_list.append(d)
         r_lock.remove(d)
         
@@ -541,6 +546,8 @@ def RunServer(config):
     global IP_LK
     global BLK_TMP
     global debug
+    global lock_tx
+    
     host = '0.0.0.0'   
     port = config[5]
     s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
@@ -660,7 +667,9 @@ def RunServer(config):
                     block_r = 'CS'
               if tx_ok:
                 if ((tx[0] == 0) and (id_corr != 0)): # new stream 
+                  lock_tx.acquire()
                   tx[0] = id_corr
+                  tx[1] = 0
                   # gateway
                   tx[2] = data[4:14].decode().strip()
                   # src
@@ -671,6 +680,7 @@ def RunServer(config):
                   tx[5] = id_str
                   # time start
                   tx[6] = time.time()
+                  lock_tx.release()
                   id_str += 1   
                   printlog(1, 'Received data from ' + tx[3].ljust(10) +   ' to ' +  tx[4].ljust(10) + ' at ' +  tx[2].ljust(10))
                   ckeck_wild_ptt(tx[3], wptttime, wpttcount, treactivate)
@@ -683,7 +693,9 @@ def RunServer(config):
                 rx_lock_tout[id_corr] = 0  
               
               if ((id_corr == tx[0]) and (id_corr != 0)):    
+                lock_tx.acquire()
                 tx[1] = 0
+                lock_tx.release()
         
               for c in clients:
                 if (((c[0] != addr[0]) or (c[1] != addr[1])) and (id_corr == tx[0]) and (id_corr != 0) and (id_corr not in rx_lock) and (c[7] == 0)):
@@ -693,12 +705,15 @@ def RunServer(config):
                 printlog(1, 'Received end of transmission')
                 inserisci_lista(LH, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.utcfromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
                 inserisci_listaD(LHD, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.utcfromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
+                lock_tx.acquire()
                 tx[0] = 0
+                tx[1] = 0
                 tx[2] = ''
                 tx[3] = ''
                 tx[4] = ''
                 tx[5] = 0
                 tx[6] = 0
+                lock_tx.release()
                   
             if (cmd == b'YSFS'):
               printlog(0, 'YSF server status enquiry from ' + addr[0] + ':' + str(addr[1]))
@@ -855,7 +870,7 @@ def hex_dump(data):
 
 ######## main ########
 
-version = '20210512'
+version = '20210606'
 
 if (len(sys.argv) != 2):
   print('Invalid Number of Arguments')
@@ -903,7 +918,7 @@ IP_LK = []
 BLK_TMP = []
 SCHED = []
 W_PTT = []
-
+lock_tx = threading.Lock()
 RunServer(config)
 
   
