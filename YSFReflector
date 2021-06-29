@@ -237,7 +237,7 @@ def canTrasmit(cs, re_en):
   global BLACK_LIST
   global WHITE_LIST
   global BLK_TMP
-  call_sp = re.split(r'[-/]', cs)
+  call_sp = re.split(r'[-/\' \']', cs)
   call = call_sp[0]
   
 ## always block a stream from repeater ###
