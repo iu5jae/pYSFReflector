@@ -525,12 +525,12 @@ def sanitize_msg(data):
 
   if ((data[0:4] == b"YSFP") and (len(data) == 14)):
     for i in range(10):
-      if (bya_msg[i+4] == 0):
+      if ((bya_msg[i+4] < 32) or (bya_msg[i+4] > 126)):
         bya_msg[i+4] = 32      
 
   if ((data[0:4] == b"YSFD") and (len(data) == 155)):
     for i in range(30):
-      if (bya_msg[i+4] == 0):
+      if ((bya_msg[i+4] < 32) or (bya_msg[i+4] > 126)):
         bya_msg[i+4] = 32
 
   return(bytes(bya_msg))
@@ -870,7 +870,7 @@ def hex_dump(data):
 
 ######## main ########
 
-version = '20210606'
+version = '20220203'
 
 if (len(sys.argv) != 2):
   print('Invalid Number of Arguments')
