@@ -28,7 +28,7 @@ import time
 import re
 import configparser
 import signal
-from datetime import datetime
+import datetime
 import bisect 
 import struct
 
@@ -133,7 +133,7 @@ def ElencoNodi(cl):
     else:
       printlog(1, 'Currently linked repeaters/gateways:')
       for c in cl:
-        printlog(1, '     ' + c[2].ljust(10) + ': ' + str(c[0]) + ':' + str(c[1]) + ' ' + str(c[3]) + '/60 : ' + datetime.utcfromtimestamp(c[6]).strftime("%Y-%m-%d %H:%M:%S"))
+        printlog(1, '     ' + c[2].ljust(10) + ': ' + str(c[0]) + ':' + str(c[1]) + ' ' + str(c[3]) + '/60 : ' + datetime.datetime.utcfromtimestamp(c[6]).strftime("%Y-%m-%d %H:%M:%S"))
         if (c[5] == 1):
           cl_lo.append(c)
       if (len(cl_lo) == 0):
@@ -167,8 +167,8 @@ def TimeoutTX(t, t_lock, r_lock, lista_lh, lista_lhd, t_out, t_react):
       lock_tx.acquire()
       t[0] = 0  
       printlog(1, 'Network watchdog has expired')
-      inserisci_lista(lista_lh, [check_string(t[2]), check_string(t[3]), check_string(t[4]), t[5], datetime.utcfromtimestamp(t[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - t[6]) ], 20)
-      inserisci_listaD(lista_lhd, [check_string(t[2]), check_string(t[3]), check_string(t[4]), t[5], datetime.utcfromtimestamp(t[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - t[6]) ], 20)
+      inserisci_lista(lista_lh, [check_string(t[2]), check_string(t[3]), check_string(t[4]), t[5], datetime.datetime.utcfromtimestamp(t[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - t[6]) ], 20)
+      inserisci_listaD(lista_lhd, [check_string(t[2]), check_string(t[3]), check_string(t[4]), t[5], datetime.datetime.utcfromtimestamp(t[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - t[6]) ], 20)
       t[1] = 0
       t[2] = ''
       t[3] = ''
@@ -279,7 +279,7 @@ def canTrasmit(cs, re_en):
 def lista_gw(cl):
   info = ''
   for c in cl:
-    info += c[2] + ':' + c[0] + ':' + str(c[1]) + ':' + datetime.utcfromtimestamp(c[6]).strftime("%d-%m-%Y %H-%M-%S") + ';'  
+    info += c[2] + ':' + c[0] + ':' + str(c[1]) + ':' + datetime.datetime.utcfromtimestamp(c[6]).strftime("%d-%m-%Y %H-%M-%S") + ';'  
   return info
 
 
@@ -687,8 +687,8 @@ def RunServer(config):
               else:
                 if (id_corr not in rx_lock):
                   rx_lock.append(id_corr)  
-                  inserisci_lista(BL, [check_string(data[4:14].decode().strip()) + '/' + block_r, check_string(data[14:24].decode().strip()), check_string(data[24:34].decode().strip()), -1, datetime.utcfromtimestamp(time.time()).strftime("%d-%m-%Y %H-%M-%S"), -1 ], 20)
-                  inserisci_listaD(BLD, [check_string(data[4:14].decode().strip()) + '/' + block_r, check_string(data[14:24].decode().strip()), check_string(data[24:34].decode().strip()), -1, datetime.utcfromtimestamp(time.time()).strftime("%d-%m-%Y %H-%M-%S"), -1 ], 20)
+                  inserisci_lista(BL, [check_string(data[4:14].decode().strip()) + '/' + block_r, check_string(data[14:24].decode().strip()), check_string(data[24:34].decode().strip()), -1, datetime.datetime.utcfromtimestamp(time.time()).strftime("%d-%m-%Y %H-%M-%S"), -1 ], 20)
+                  inserisci_listaD(BLD, [check_string(data[4:14].decode().strip()) + '/' + block_r, check_string(data[14:24].decode().strip()), check_string(data[24:34].decode().strip()), -1, datetime.datetime.utcfromtimestamp(time.time()).strftime("%d-%m-%Y %H-%M-%S"), -1 ], 20)
                   printlog(1, 'Data from ' + data[14:24].decode().strip().ljust(10) + ' at ' + data[4:14].decode().strip().ljust(10) + ' blocked/' + block_r)
                 rx_lock_tout[id_corr] = 0  
               
@@ -703,8 +703,8 @@ def RunServer(config):
             
               if (((data[34] & 0x01) == 0x01) and (tx[0] == id_corr) and (tx[0] !=0)):
                 printlog(1, 'Received end of transmission')
-                inserisci_lista(LH, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.utcfromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
-                inserisci_listaD(LHD, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.utcfromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
+                inserisci_lista(LH, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.datetime.utcfromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
+                inserisci_listaD(LHD, [check_string(tx[2]), check_string(tx[3]), check_string(tx[4]), tx[5], datetime.datetime.utcfromtimestamp(tx[6]).strftime("%d-%m-%Y %H-%M-%S"), round(time.time() - tx[6]) ], 20)
                 lock_tx.acquire()
                 tx[0] = 0
                 tx[1] = 0
@@ -825,7 +825,7 @@ def printlog(log_level, mess):
   global debug
   
   if file_rotate == "1":
-    log_file = log_basename + '-' + str(datetime.utcnow().strftime('%Y-%m-%d')) + '.log'
+    log_file = log_basename + '-' + str(datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d')) + '.log'
   else:
     log_file = log_basename + '.log'
   try:
@@ -838,10 +838,10 @@ def printlog(log_level, mess):
     
   if isinstance(log_level, int):
     if file_level <= log_level:
-      str_log = check_string('M: ' + str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f'))[:-3] + ' ' + mess)
+      str_log = check_string('M: ' + str(datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S.%f'))[:-3] + ' ' + mess)
   else:
     if log_level == "d" and debug == 1:
-      str_log = check_string('D: ' + str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f'))[:-3] + ' ' + mess)
+      str_log = check_string('D: ' + str(datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S.%f'))[:-3] + ' ' + mess)
   try:
     filelog.write(str_log + '\n') 
     filelog.flush()
@@ -897,7 +897,7 @@ debug = config[13]
 
 ### log
 if file_rotate == "1":
-  log_file = log_basename + '-' + str(datetime.utcnow().strftime('%Y-%m-%d')) + '.log'
+  log_file = log_basename + '-' + str(datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d')) + '.log'
 else:
   log_file = log_basename + '.log'
 try:
